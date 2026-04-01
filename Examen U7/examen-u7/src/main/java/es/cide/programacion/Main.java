@@ -1,6 +1,3 @@
-//Nombre: Blai Lorente Fuster
-//Fecha: 31/03/2026
-
 package es.cide.programacion;
 
 import java.awt.BorderLayout;
