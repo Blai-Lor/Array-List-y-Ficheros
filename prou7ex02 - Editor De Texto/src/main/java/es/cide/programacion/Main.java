@@ -5,7 +5,7 @@ import java.awt.Color;
 import java.awt.GridLayout;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 
 import javax.swing.JButton;
@@ -19,12 +19,8 @@ import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 public class Main {
-    //Inicializamos los botones, el area de texto, el frame, el file y el filechooser
-    public static JButton nuevo, abrir, guardar, guardarComo;
-    public static JTextArea areaTexto; 
-    public static JFrame frame;
-    public static File file;
-    public static JFileChooser filechooser;
+    //Inicializamos el archivo actual en un array para poder modificarlo dentro de los eventos
+    static File[] archivoActual = {null};
 
     public static void main(String[] args) {
         //Look And Feel
@@ -41,94 +37,96 @@ public class Main {
             e.printStackTrace();
         }
 
-        frame = new JFrame("Editor de Texto - [Blai]");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 450);
-        frame.setLayout(new BorderLayout(10, 10));
+        //Frame
+        JFrame menuFrame = new JFrame("Editor de Texto - [Blai]");
+        menuFrame.setSize(600, 450);
+        menuFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        menuFrame.setLayout(new BorderLayout());
+        menuFrame.setLocationRelativeTo(null);
 
         //Panel de los botones
-        JPanel panel1Botones = new JPanel(); //Panel de los botones
-        panel1Botones.setLayout(new GridLayout(1, 4, 10, 10)); //1 fila con 4 columnas
-        panel1Botones.setBorder(new EmptyBorder(10, 10, 0, 10)); //Margen superior, lateral e inferior
+        JPanel panel1Botones = new JPanel(); 
+        panel1Botones.setLayout(new GridLayout(1, 4, 10, 10));
+        panel1Botones.setBorder(new EmptyBorder(10, 10, 0, 10)); 
         
-        filechooser = new JFileChooser(); //Creamos el filechooser para abrir y guardar archivos
-        nuevo = new JButton("📄 Nuevo"); //Creamos el boton de Nuevo
-        abrir = new JButton("📂 Abrir"); //Creamos el boton de Abrir
-        guardar = new JButton("💾 Guardar"); //Creamos el boton de Guardar
-        guardarComo = new JButton("💾➕ Guardar como"); //Creamos el boton de Guardar como
-        panel1Botones.add(nuevo);
-        panel1Botones.add(abrir);
-        panel1Botones.add(guardar);
-        panel1Botones.add(guardarComo);
+        JButton botonNuevo = new JButton("📄 Nuevo"); 
+        JButton botonAbrir = new JButton("📂 Abrir"); 
+        JButton botonGuardar = new JButton("💾 Guardar"); 
+        JButton botonGuardarComo = new JButton("💾➕ Guardar como"); 
+        panel1Botones.add(botonNuevo);
+        panel1Botones.add(botonAbrir);
+        panel1Botones.add(botonGuardar);
+        panel1Botones.add(botonGuardarComo);
 
         //El JTextArea ocupara el centro de la ventana
-        areaTexto = new JTextArea();
-        areaTexto.setLineWrap(true); //Salto de linea automatico
-        areaTexto.setWrapStyleWord(true); //No corta las palabras al escribir tanto
+        JTextArea areaTexto = new JTextArea();
+        areaTexto.setLineWrap(true); 
+        areaTexto.setWrapStyleWord(true); 
 
-        //Panel de escritura
-        JPanel panel2Escritura = new JPanel(); 
-        panel2Escritura.setLayout(new GridLayout(1, 1));
-        panel2Escritura.setBorder(new EmptyBorder(10, 15, 15, 15)); //Margen superior, lateral e inferior
-        
         //El Scroll para el texto
         JScrollPane scroll = new JScrollPane(areaTexto);
-        panel2Escritura.add(scroll);
+        scroll.setBorder(new EmptyBorder(5, 5, 5, 5));
 
+        //Creamos el filechooser para abrir y guardar archivos
+        JFileChooser fileEsc = new JFileChooser();
+        
         //Boton: Nuevo
-        nuevo.addActionListener(e -> {
-            areaTexto.setText(""); //Borra todo el texto que hay en el area de escritura
-            file = null; //Resetea el fichero actual a null
+        botonNuevo.addActionListener(e -> {
+            areaTexto.setText(""); 
+            archivoActual[0] = null;
         });
 
         //Boton: Abrir
-        abrir.addActionListener(e -> Abrir());
-        
-        //Boton: Guardar
-        guardar.addActionListener(e -> Guardar(false));
+        botonAbrir.addActionListener(e -> {
+            //Abre el selector de archivos para elegir cual queremos abrir
+            if (fileEsc.showOpenDialog(menuFrame) == JFileChooser.APPROVE_OPTION) {
+                archivoActual[0] = fileEsc.getSelectedFile(); //Guarda el archivo que hemos elegido
+                try (FileInputStream lectura = new FileInputStream(archivoActual[0])) { //Para leer los bytes del archivo
+                    byte[] todosLosBytes = lectura.readAllBytes(); //Lee todo el contenido del archivo en bytes
+                    areaTexto.setText(new String(todosLosBytes)); //Convertimos esos bytes en texto normal que podamos leer
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(menuFrame, "Error al abrir el archivo");
+                }
+            }
+        });
 
-        //Boton: Guardar como
-        guardarComo.addActionListener(e -> Guardar(true));
+        //Boton: Guardar Como
+        botonGuardarComo.addActionListener(e -> {
+            //Abre el selector de archivos para elegir cual queremos abrir
+            if (fileEsc.showSaveDialog(menuFrame) == JFileChooser.APPROVE_OPTION) {
+                archivoActual[0] = fileEsc.getSelectedFile(); //Guarda el archivo que hemos elegido
+                
+                try (FileWriter escribo = new FileWriter(archivoActual[0])) { //Guarda el contenido del JTextArea
+                    areaTexto.write(escribo); //Escribe el contenido
+                    JOptionPane.showMessageDialog(menuFrame, "Guardado correctamente");
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(menuFrame, "Error al guardar");
+                }
+            }
+        });
+
+        //Boton: Guardar
+        botonGuardar.addActionListener(e -> {
+            if (archivoActual[0] == null) { //Si el archivo es nuevo, pide una nueva ruta
+                if (fileEsc.showSaveDialog(menuFrame) == JFileChooser.APPROVE_OPTION) {
+                    archivoActual[0] = fileEsc.getSelectedFile(); //Si lo acepta lo guarda
+                }
+            }
+
+            //Si ya hay una ruta
+            if (archivoActual[0] != null) {
+                try (FileWriter escribo = new FileWriter(archivoActual[0])) {
+                    areaTexto.write(escribo);
+                    JOptionPane.showMessageDialog(menuFrame, "Guardado correctamente");
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(menuFrame, "Error al guardar");
+                }
+            }
+        });
 
         //Añadimos los paneles
-        frame.add(panel1Botones, BorderLayout.NORTH); //Aparecera arriba
-        frame.add(panel2Escritura, BorderLayout.CENTER); //Aparecera en el centro
-
-        frame.setLocationRelativeTo(null); //Centra la ventana en la pantalla al aparecer
-        frame.setVisible(true);
-    }
-
-    public static void Abrir() {
-        int resultado = filechooser.showOpenDialog(frame); //Abre el selector de archivos
-
-        if (resultado == JFileChooser.APPROVE_OPTION) { //Si el usuario selecciona un fichero y le da al boton "Aceptar"
-            file = filechooser.getSelectedFile(); //Guarda el archivo seleccionado
-
-            try (FileInputStream fis = new FileInputStream(file)) { //Abre el archivo para leer
-                byte[] datos = fis.readAllBytes(); //Lee el contenido
-                areaTexto.setText(new String(datos, "UTF-8")); //Pasa el contenido de bytes a UTF-8 y muestra el contenido
-            } catch (Exception ex) { //Si hay algun error
-                ex.printStackTrace(); //Muestra que error es
-            }
-        }
-    }
-
-    public static void Guardar(boolean guarda) {
-        if (file == null || guarda) { //Si no hay ningun fichero actual, es como si fuera un "Guardar como"
-            int resultado = filechooser.showSaveDialog(frame); //Enseña que se ha guardado con un mensaje
-            if (resultado != JFileChooser.APPROVE_OPTION) { //Verifica que se ha seleccionado una ruta
-                return;
-            }
-
-            file = filechooser.getSelectedFile(); //Guarda el archivo seleccionado
-        }
-
-        //Metodo para escribir el contenido en un fichero
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(areaTexto.getText().getBytes("UTF-8")); //Pasa el texto a bytes con el UTF-8 y lo escribe secuencialmente en el fichero
-            JOptionPane.showMessageDialog(frame, "Guardado con éxito"); //Muestra un mensaje de que el fichero se ha guardado correctamente
-        } catch (IOException ex) { //Si hay algun error
-            ex.printStackTrace(); //Muestra que error es
-        }
+        menuFrame.add(panel1Botones, BorderLayout.NORTH);
+        menuFrame.add(scroll, BorderLayout.CENTER);
+        menuFrame.setVisible(true);
     }
 }
